@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library Management System</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #6b7385;
+    --line: #e3e6ec;
+    --accent: #2f5bea;
+    --accent-dark: #2447c0;
+    --ok: #1c8a4e;
+    --ok-bg: #e2f5ea;
+    --warn: #b4580a;
+    --warn-bg: #fdeede;
+    --bad: #c0392b;
+    --bad-bg: #fbe7e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c;
+      --card: #1b202b;
+      --text: #e8ebf2;
+      --muted: #97a0b3;
+      --line: #2b3242;
+      --accent: #6f8dff;
+      --accent-dark: #8aa2ff;
+      --ok: #55d08a;
+      --ok-bg: #173324;
+      --warn: #f0a35c;
+      --warn-bg: #3a2a16;
+      --bad: #ff8b7d;
+      --bad-bg: #3d1e1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 20px;
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat b { display: block; font-size: 24px; }
+  .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat.bad b { color: var(--bad); }
+
+  nav { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  nav button {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+  }
+  nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  section { display: none; }
+  section.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+
+  form.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); flex: 1 1 180px; }
+  input, select {
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    min-width: 0;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .btn {
+    font: inherit;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--accent-dark); }
+  .btn.small { padding: 4px 10px; font-size: 13px; }
+  .btn.ghost { background: transparent; color: var(--bad); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--bad-bg); }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar input { flex: 1 1 220px; }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: #222a3a;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    max-width: 90vw;
+    z-index: 10;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { background: #b3261e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Library Management System</h1>
+  <p>C++ backend &middot; HTML front end</p>
+</header>
+
+<main>
+  <div class="stats" id="stats"></div>
+
+  <nav id="tabs">
+    <button data-tab="books" class="active">Books</button>
+    <button data-tab="members">Members</button>
+    <button data-tab="circulation">Issue &amp; Return</button>
+  </nav>
+
+  <!-- BOOKS -->
+  <section id="books" class="active">
+    <div class="card">
+      <h2>Add a book</h2>
+      <form class="row" id="addBookForm">
+        <label>Title <input name="title" required maxlength="120"></label>
+        <label>Author <input name="author" required maxlength="80"></label>
+        <button class="btn" type="submit">Add book</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search by title or author">
+        <select id="filter">
+          <option value="all">All books</option>
+          <option value="available">Available</option>
+          <option value="issued">Issued</option>
+        </select>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Status</th><th></th></tr></thead>
+        <tbody id="bookRows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- MEMBERS -->
+  <section id="members">
+    <div class="card">
+      <h2>Register a member</h2>
+      <form class="row" id="addMemberForm">
+        <label>Name <input name="name" required maxlength="60"></label>
+        <button class="btn" type="submit">Register</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="tablewrap"><table>
+        <thead><tr><th>ID</th><th>Name</th><th>Books borrowed</th></tr></thead>
+        <tbody id="memberRows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ISSUE & RETURN -->
+  <section id="circulation">
+    <div class="card">
+      <h2>Issue a book</h2>
+      <form class="row" id="issueForm">
+        <label>Book <select name="bookId" id="issueBook" required></select></label>
+        <label>Member <select name="memberId" id="issueMember" required></select></label>
+        <button class="btn" type="submit">Issue</button>
+      </form>
+      <p id="loanRule" style="color:var(--muted);font-size:13px;margin:10px 0 0"></p>
+    </div>
+    <div class="card">
+      <h2>Currently issued</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>ID</th><th>Title</th><th>Member</th><th>Due</th><th>Fine</th><th></th></tr></thead>
+        <tbody id="issuedRows"></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let books = [], members = [], stats = {};
+
+// ---- talking to the C++ server
+async function api(path, data) {
+  const opts = data
+    ? { method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(data) }
+    : {};
+  const res = await fetch(path, opts);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Request failed');
+  return json;
+}
+
+let toastTimer;
+function toast(msg, isError) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = ''), 3500);
+}
+
+async function run(action) {
+  try {
+    const result = await action();
+    if (result && result.message) toast(result.message);
+    await refresh();
+    return true;
+  } catch (e) {
+    toast(e.message, true);
+    return false;
+  }
+}
+
+async function refresh() {
+  [books, members, stats] = await Promise.all([
+    api('/api/books'), api('/api/members'), api('/api/stats'),
+  ]);
+  render();
+}
+
+// ---- drawing the page
+function render() {
+  $('#stats').innerHTML = [
+    ['Total books', stats.books, ''],
+    ['Available', stats.available, ''],
+    ['Issued', stats.issued, ''],
+    ['Overdue', stats.overdue, stats.overdue ? 'bad' : ''],
+    ['Members', stats.members, ''],
+  ].map(([label, n, cls]) =>
+    `<div class="stat ${cls}"><b>${n}</b><span>${label}</span></div>`).join('');
+
+  $('#loanRule').textContent =
+    `Loan period: ${stats.loanDays} days. Fine: Rs ${stats.finePerDay} per late day.`;
+
+  renderBooks();
+  renderMembers();
+  renderCirculation();
+}
+
+function statusBadge(b) {
+  if (!b.issued) return '<span class="badge ok">Available</span>';
+  const cls = b.overdueDays > 0 ? 'bad' : 'warn';
+  const text = b.overdueDays > 0 ? `Overdue (${b.memberName})` : `Issued to ${b.memberName}`;
+  return `<span class="badge ${cls}">${esc(text)}</span>`;
+}
+
+function renderBooks() {
+  const q = $('#search').value.trim().toLowerCase();
+  const f = $('#filter').value;
+  const list = books.filter((b) =>
+    (f === 'all' || (f === 'issued') === b.issued) &&
+    (!q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)));
+
+  $('#bookRows').innerHTML = list.length
+    ? list.map((b) => `<tr>
+        <td>${b.id}</td>
+        <td>${esc(b.title)}</td>
+        <td>${esc(b.author)}</td>
+        <td>${statusBadge(b)}</td>
+        <td>${b.issued ? '' :
+          `<button class="btn small ghost" data-remove="${b.id}">Remove</button>`}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" class="empty">${books.length ? 'No matching books.' : 'No books yet. Add one above.'}</td></tr>`;
+}
+
+function renderMembers() {
+  $('#memberRows').innerHTML = members.length
+    ? members.map((m) => `<tr><td>${m.id}</td><td>${esc(m.name)}</td><td>${m.borrowed}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="empty">No members yet. Register one above.</td></tr>';
+}
+
+function renderCirculation() {
+  const available = books.filter((b) => !b.issued);
+  const issued = books.filter((b) => b.issued);
+
+  const keepBook = $('#issueBook').value, keepMember = $('#issueMember').value;
+  $('#issueBook').innerHTML = available.length
+    ? available.map((b) => `<option value="${b.id}">#${b.id} ${esc(b.title)}</option>`).join('')
+    : '<option value="">No books available</option>';
+  $('#issueMember').innerHTML = members.length
+    ? members.map((m) => `<option value="${m.id}">#${m.id} ${esc(m.name)}</option>`).join('')
+    : '<option value="">No members registered</option>';
+  if (available.some((b) => String(b.id) === keepBook)) $('#issueBook').value = keepBook;
+  if (members.some((m) => String(m.id) === keepMember)) $('#issueMember').value = keepMember;
+
+  $('#issuedRows').innerHTML = issued.length
+    ? issued.map((b) => `<tr>
+        <td>${b.id}</td>
+        <td>${esc(b.title)}</td>
+        <td>${esc(b.memberName)}</td>
+        <td>${esc(b.dueOn)}${b.overdueDays ? ` <span class="badge bad">${b.overdueDays} day(s) late</span>` : ''}</td>
+        <td>${b.fine ? 'Rs ' + b.fine : '-'}</td>
+        <td><button class="btn small" data-return="${b.id}">Return</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">No books are currently issued.</td></tr>';
+}
+
+// ---- events
+$('#tabs').addEventListener('click', (e) => {
+  const tab = e.target.dataset.tab;
+  if (!tab) return;
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('active', b === e.target));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('active', s.id === tab));
+});
+
+$('#search').addEventListener('input', renderBooks);
+$('#filter').addEventListener('change', renderBooks);
+
+$('#addBookForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  if (await run(() => api('/api/books', Object.fromEntries(new FormData(form))))) form.reset();
+});
+
+$('#addMemberForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  if (await run(() => api('/api/members', Object.fromEntries(new FormData(form))))) form.reset();
+});
+
+$('#issueForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  run(() => api('/api/issue', Object.fromEntries(new FormData(e.target))));
+});
+
+document.addEventListener('click', (e) => {
+  const rm = e.target.dataset.remove, rt = e.target.dataset.return;
+  if (rm && confirm('Remove this book from the library?'))
+    run(() => api('/api/books/remove', { id: rm }));
+  if (rt) run(() => api('/api/return', { bookId: rt }));
+});
+
+refresh().catch((e) => toast('Cannot reach the C++ server: ' + e.message, true));
+</script>
+</body>
+</html>
